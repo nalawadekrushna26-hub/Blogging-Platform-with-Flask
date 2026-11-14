@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Edit: {{ post.title }} — BlogCraft{% endblock %}
+
+{% block extra_css %}
+<!-- Quill Snow Theme CSS -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container editor-container">
+    <div class="editor-header">
+        <div>
+            <span class="badge badge-warning">Editing Article</span>
+            <h1 class="editor-main-title">Update your story</h1>
+            <p class="editor-subtitle">Refine your content, update tags, or replace the cover image.</p>
+        </div>
+        <div class="editor-actions">
+            <a href="{{ url_for('posts.view_post', slug=post.slug) }}" class="btn btn-outline btn-sm">
+                <i class="fa-regular fa-eye"></i> View Live
+            </a>
+            <a href="{{ url_for('auth.profile') }}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-arrow-left"></i> My Profile
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('posts.edit_post', post_id=post.id) }}" enctype="multipart/form-data" id="editPostForm" class="editor-form" novalidate>
+        {{ form.hidden_tag() }}
+        {{ form.content(id="content") }}
+
+        <div class="editor-grid">
+            <!-- Main Content Area -->
+            <div class="editor-left-column">
+                <div class="form-group">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-control form-control-title" + (" is-invalid" if form.title.errors else ""), placeholder="Article title") }}
+                    {% for error in form.title.errors %}
+                        <span class="invalid-feedback">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.summary.label(class="form-label") }}
+                    {{ form.summary(class="form-control" + (" is-invalid" if form.summary.errors else ""), rows=2, placeholder="Subtitle or overview") }}
+                    {% for error in form.summary.errors %}
+                        <span class="invalid-feedback">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Article Body (Rich Text)</label>
+                    <!-- Quill Editor Mount Point -->
+                    <div id="quill-editor" class="quill-editor-wrapper"></div>
+                    {% for error in form.content.errors %}
+                        <span class="invalid-feedback d-block">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Settings Sidebar -->
+            <aside class="editor-right-column">
+                <div class="card editor-card">
+                    <h3 class="card-title-sm"><i class="fa-solid fa-sliders"></i> Article Settings</h3>
+
+                    <div class="form-group mt-3">
+                        {{ form.category.label(class="form-label") }}
+                        {{ form.category(class="form-control") }}
+                        {% for error in form.category.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.tags.label(class="form-label") }}
+                        {{ form.tags(class="form-control", placeholder="python, flask, webdev") }}
+                        <small class="form-text">Separate tags with commas</small>
+                        {% for error in form.tags.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.featured_image.label(class="form-label") }}
+                        {% if post.featured_image %}
+                            <div class="current-thumbnail">
+                                <img src="{{ url_for('static', filename='images/uploads/' + post.featured_image) }}" alt="Current Cover" class="img-preview" />
+                                <small class="text-muted d-block">Current cover photo. Uploading a new file will replace this.</small>
+                            </div>
+                        {% endif %}
+                        {{ form.featured_image(class="form-control-file mt-2") }}
+                        {% for error in form.featured_image.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group checkbox-box">
+                        <label class="checkbox-container">
+                            {{ form.is_published() }}
+                            <span><strong>{{ form.is_published.label.text }}</strong></span>
+                        </label>
+                    </div>
+
+                    <div class="form-action mt-4">
+                        {{ form.submit(class="btn btn-primary btn-block btn-lg", value="Save Changes") }}
+                    </div>
+                </div>
+
+                <!-- Danger Zone: Delete Article -->
+                <div class="card card-danger mt-3">
+                    <h4 class="card-title-danger"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h4>
+                    <p class="text-muted-sm">Permanently delete this article and all reader comments. This cannot be undone.</p>
+                    <button type="button" class="btn btn-danger btn-block btn-sm mt-3" onclick="confirmDelete()">
+                        <i class="fa-regular fa-trash-can"></i> Delete Article
+                    </button>
+                </div>
+            </aside>
+        </div>
+    </form>
+
+    <!-- Hidden Form for Secure POST Deletion -->
+    <form id="deleteForm" method="POST" action="{{ url_for('posts.delete_post', post_id=post.id) }}" style="display:none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Quill Core JS -->
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const quill = new Quill('#quill-editor', {
+            theme: 'snow',
+            placeholder: 'Edit your article content here...',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['link', 'image', 'clean']
+                ]
+            }
+        });
+
+        // Load existing post HTML content into Quill
+        const initialContent = {{ post.content | tojson }};
+        if (initialContent) {
+            quill.root.innerHTML = initialContent;
+        }
+
+        const form = document.getElementById('editPostForm');
+        const hiddenContentInput = document.getElementById('content');
+
+        form.addEventListener('submit', function (e) {
+            const html = quill.root.innerHTML;
+            const text = quill.getText().trim();
+            if (text.length === 0 && !html.includes('<img')) {
+                hiddenContentInput.value = '';
+            } else {
+                hiddenContentInput.value = html;
+            }
+        });
+    });
+
+    function confirmDelete() {
+        if (confirm("Are you sure you want to permanently delete this article? This cannot be undone.")) {
+            document.getElementById('deleteForm').submit();
+        }
+    }
+</script>
+{% endblock %}

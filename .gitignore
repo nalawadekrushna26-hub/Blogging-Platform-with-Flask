@@ -1,0 +1,25 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# SQLite Database
+*.db
+*.sqlite3
+instance/
+
+# IDE files
+.vscode/
+.idea/
+
+# Uploaded media (optional, keeping local uploads out of git)
+app/static/images/uploads/*
+!app/static/images/uploads/.gitkeep

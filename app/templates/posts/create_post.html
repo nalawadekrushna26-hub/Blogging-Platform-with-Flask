@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Write New Article — BlogCraft{% endblock %}
+
+{% block extra_css %}
+<!-- Quill Snow Theme CSS -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container editor-container">
+    <div class="editor-header">
+        <div>
+            <span class="badge badge-primary">Drafting Mode</span>
+            <h1 class="editor-main-title">Write a new story</h1>
+            <p class="editor-subtitle">Share your insights, tutorials, or perspectives with readers worldwide.</p>
+        </div>
+        <a href="{{ url_for('auth.profile') }}" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-arrow-left"></i> Back to Profile
+        </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('posts.create_post') }}" enctype="multipart/form-data" id="postForm" class="editor-form" novalidate>
+        {{ form.hidden_tag() }}
+        {{ form.content(id="content") }}
+
+        <div class="editor-grid">
+            <!-- Main Content Area -->
+            <div class="editor-left-column">
+                <div class="form-group">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-control form-control-title" + (" is-invalid" if form.title.errors else ""), placeholder="Give your article a compelling title...") }}
+                    {% for error in form.title.errors %}
+                        <span class="invalid-feedback">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.summary.label(class="form-label") }}
+                    {{ form.summary(class="form-control" + (" is-invalid" if form.summary.errors else ""), rows=2, placeholder="A brief subtitle or overview that hooks readers on search results and cards...") }}
+                    {% for error in form.summary.errors %}
+                        <span class="invalid-feedback">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Article Body (Rich Text)</label>
+                    <!-- Quill Editor Mount Point -->
+                    <div id="quill-editor" class="quill-editor-wrapper"></div>
+                    {% for error in form.content.errors %}
+                        <span class="invalid-feedback d-block">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Settings Sidebar -->
+            <aside class="editor-right-column">
+                <div class="card editor-card">
+                    <h3 class="card-title-sm"><i class="fa-solid fa-sliders"></i> Publishing Options</h3>
+
+                    <div class="form-group mt-3">
+                        {{ form.category.label(class="form-label") }}
+                        {{ form.category(class="form-control") }}
+                        {% for error in form.category.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.tags.label(class="form-label") }}
+                        {{ form.tags(class="form-control", placeholder="python, flask, webdev") }}
+                        <small class="form-text">Separate tags with commas</small>
+                        {% for error in form.tags.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.featured_image.label(class="form-label") }}
+                        {{ form.featured_image(class="form-control-file") }}
+                        <small class="form-text">Recommended size: 1200x630 (PNG, JPG, WEBP)</small>
+                        {% for error in form.featured_image.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group checkbox-box">
+                        <label class="checkbox-container">
+                            {{ form.is_published() }}
+                            <span><strong>{{ form.is_published.label.text }}</strong></span>
+                        </label>
+                    </div>
+
+                    <div class="form-action mt-4">
+                        {{ form.submit(class="btn btn-primary btn-block btn-lg") }}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Quill Core JS -->
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Initialize Quill Rich Text Editor
+        const quill = new Quill('#quill-editor', {
+            theme: 'snow',
+            placeholder: 'Start crafting your story with rich headings, code snippets, lists, and quotes...',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['link', 'image', 'clean']
+                ]
+            }
+        });
+
+        // Sync Quill HTML content to HiddenField on form submit
+        const form = document.getElementById('postForm');
+        const hiddenContentInput = document.getElementById('content');
+
+        // If there is existing value (e.g. from validation error reload)
+        if (hiddenContentInput.value) {
+            quill.root.innerHTML = hiddenContentInput.value;
+        }
+
+        form.addEventListener('submit', function (e) {
+            // Check if empty editor
+            const html = quill.root.innerHTML;
+            const text = quill.getText().trim();
+            if (text.length === 0 && !html.includes('<img')) {
+                hiddenContentInput.value = '';
+            } else {
+                hiddenContentInput.value = html;
+            }
+        });
+    });
+</script>
+{% endblock %}

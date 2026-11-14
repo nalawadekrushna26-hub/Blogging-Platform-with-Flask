@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — BlogCraft{% endblock %}
+
+{% block content %}
+<article class="article-container">
+    <!-- Article Header -->
+    <header class="article-header container">
+        <div class="article-category-row">
+            {% if post.category %}
+                <span class="badge badge-primary">{{ post.category.name }}</span>
+            {% endif %}
+            {% if not post.is_published %}
+                <span class="badge badge-warning"><i class="fa-solid fa-file-pen"></i> Draft (Only visible to you)</span>
+            {% endif %}
+        </div>
+
+        <h1 class="article-headline">{{ post.title }}</h1>
+
+        {% if post.summary %}
+            <p class="article-lead">{{ post.summary }}</p>
+        {% endif %}
+
+        <div class="article-author-bar">
+            <div class="author-meta-left">
+                {% if post.author.profile_image and post.author.profile_image != 'default_avatar.svg' %}
+                    <img src="{{ url_for('static', filename='images/uploads/' + post.author.profile_image) }}" alt="{{ post.author.username }}" class="author-avatar-img">
+                {% else %}
+                    <div class="author-avatar-fallback">{{ post.author.username[:1].upper() }}</div>
+                {% endif %}
+                <div class="author-details">
+                    <span class="author-name-text">{{ post.author.username }}</span>
+                    <span class="article-date-text">
+                        {{ post.created_at.strftime('%B %d, %Y') }} &bull;
+                        {% set words = post.content|striptags|wordcount %}
+                        {{ (words / 200)|round(0, 'ceil')|int }} min read
+                    </span>
+                </div>
+            </div>
+
+            <!-- Author Actions: Edit / Delete -->
+            {% if current_user.is_authenticated and current_user.id == post.user_id %}
+                <div class="author-actions">
+                    <a href="{{ url_for('posts.edit_post', post_id=post.id) }}" class="btn btn-outline btn-sm">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit Article
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Featured Cover Image Banner -->
+    {% if post.featured_image %}
+        <div class="article-featured-banner container">
+            <img src="{{ url_for('static', filename='images/uploads/' + post.featured_image) }}" alt="{{ post.title }}" class="featured-img" />
+        </div>
+    {% endif %}
+
+    <!-- Article Rich Body Content -->
+    <div class="container article-body-container">
+        <div class="prose">
+            {{ post.content | safe }}
+        </div>
+
+        <!-- Tags List -->
+        {% if post.tags %}
+            <div class="article-tags-wrapper">
+                <span class="tags-label"><i class="fa-solid fa-tags"></i> Tags:</span>
+                <div class="tags-list">
+                    {% for tag in post.tags %}
+                        <a href="{{ url_for('main.tag_posts', slug=tag.slug) }}" class="tag-pill">#{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Author Bio Box -->
+        <div class="author-bio-card">
+            {% if post.author.profile_image and post.author.profile_image != 'default_avatar.svg' %}
+                <img src="{{ url_for('static', filename='images/uploads/' + post.author.profile_image) }}" alt="{{ post.author.username }}" class="bio-avatar-img">
+            {% else %}
+                <div class="bio-avatar-fallback">{{ post.author.username[:1].upper() }}</div>
+            {% endif %}
+            <div class="bio-details">
+                <span class="bio-label">Written by</span>
+                <h3 class="bio-author-name">{{ post.author.username }}</h3>
+                <p class="bio-author-text">{{ post.author.bio or 'Writer and contributor on BlogCraft.' }}</p>
+            </div>
+        </div>
+
+        <!-- Comments & Community Discussion Section -->
+        <section id="comments-section" class="comments-section">
+            <div class="comments-header flex-between">
+                <h3 class="comments-title">
+                    <i class="fa-regular fa-comments"></i> Discussion 
+                    <span class="comments-count">({{ comments|length }})</span>
+                </h3>
+            </div>
+
+            <!-- Comment Composer -->
+            {% if current_user.is_authenticated %}
+                <div class="comment-composer-card">
+                    <div class="comment-composer-avatar">
+                        {% if current_user.profile_image and current_user.profile_image != 'default_avatar.svg' %}
+                            <img src="{{ url_for('static', filename='images/uploads/' + current_user.profile_image) }}" alt="{{ current_user.username }}">
+                        {% else %}
+                            <div class="composer-avatar-fallback">{{ current_user.username[:1].upper() }}</div>
+                        {% endif %}
+                    </div>
+                    <form method="POST" action="{{ url_for('posts.add_comment', slug=post.slug) }}" class="comment-form">
+                        {{ comment_form.hidden_tag() }}
+                        <div class="form-group mb-2">
+                            {{ comment_form.content(class="form-control comment-textarea") }}
+                            {% for error in comment_form.content.errors %}
+                                <span class="invalid-feedback d-block">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="text-right">
+                            {{ comment_form.submit(class="btn btn-primary btn-sm") }}
+                        </div>
+                    </form>
+                </div>
+            {% else %}
+                <div class="comment-login-prompt">
+                    <p><i class="fa-solid fa-lock"></i> Want to join the conversation?</p>
+                    <div class="prompt-actions">
+                        <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-outline btn-sm">Log In</a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Sign Up</a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Comments Feed -->
+            {% if comments %}
+                <div class="comments-list">
+                    {% for comment in comments %}
+                        <div class="comment-card" id="comment-{{ comment.id }}">
+                            <div class="comment-avatar-wrapper">
+                                {% if comment.author.profile_image and comment.author.profile_image != 'default_avatar.svg' %}
+                                    <img src="{{ url_for('static', filename='images/uploads/' + comment.author.profile_image) }}" alt="{{ comment.author.username }}" class="comment-avatar-img">
+                                {% else %}
+                                    <div class="comment-avatar-fallback">{{ comment.author.username[:1].upper() }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="comment-main-content">
+                                <div class="comment-meta-bar">
+                                    <div class="comment-author-group">
+                                        <span class="comment-author-name">{{ comment.author.username }}</span>
+                                        {% if comment.author.id == post.author.id %}
+                                            <span class="badge-author-pill">Author</span>
+                                        {% endif %}
+                                        <span class="comment-timestamp">{{ comment.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                                    </div>
+
+                                    <!-- Delete Button (Only for comment author OR article author) -->
+                                    {% if current_user.is_authenticated and (current_user.id == comment.author.id or current_user.id == post.author.id) %}
+                                        <button type="button" class="btn-comment-delete" title="Delete comment" onclick="confirmDeleteComment({{ comment.id }})">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                <div class="comment-text-body">
+                                    {{ comment.content }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="comments-empty-card">
+                    <div class="empty-icon"><i class="fa-regular fa-message"></i></div>
+                    <h4>No comments yet</h4>
+                    <p>Be the first reader to share your insights, ask questions, or provide feedback.</p>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+</article>
+
+<!-- Hidden Universal Comment Delete Form -->
+<form id="commentDeleteForm" method="POST" action="" style="display:none;"></form>
+
+<script>
+    function confirmDeleteComment(commentId) {
+        if (confirm("Are you sure you want to delete this comment?")) {
+            const form = document.getElementById('commentDeleteForm');
+            form.action = `/posts/comment/${commentId}/delete`;
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

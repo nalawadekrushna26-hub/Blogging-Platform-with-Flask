@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}BlogCraft — Stories, Ideas & Insights{% endblock %}
+
+{% block content %}
+<!-- Homepage Header -->
+<section class="home-hero">
+    <div class="container hero-container text-center">
+        <span class="badge badge-primary">Our Blog & Publications</span>
+        <h1 class="hero-title">Stories, thinking, and expertise.</h1>
+        <p class="hero-subtitle">
+            Explore industry insights, technical deep-dives, and perspectives from authors around the globe.
+        </p>
+    </div>
+</section>
+
+<div class="container home-content">
+    <!-- Featured Hero Post (Shown on Default Homepage) -->
+    {% if featured_post and not selected_category %}
+        <section class="featured-post-section">
+            <article class="featured-post-card">
+                <div class="featured-image-wrapper">
+                    {% if featured_post.featured_image %}
+                        <img src="{{ url_for('static', filename='images/uploads/' + featured_post.featured_image) }}" alt="{{ featured_post.title }}">
+                    {% else %}
+                        <div class="featured-placeholder">
+                            <i class="fa-solid fa-feather-pointed"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="featured-body">
+                    <div class="featured-tag-row">
+                        <span class="badge badge-featured">Featured Story</span>
+                        {% if featured_post.category %}
+                            <span class="category-pill">{{ featured_post.category.name }}</span>
+                        {% endif %}
+                    </div>
+                    <h2 class="featured-title">
+                        <a href="{{ url_for('posts.view_post', slug=featured_post.slug) }}">{{ featured_post.title }}</a>
+                    </h2>
+                    <p class="featured-summary">{{ featured_post.summary or (featured_post.content|striptags|truncate(180)) }}</p>
+                    <div class="featured-author-row">
+                        <div class="author-avatar-group">
+                            {% if featured_post.author.profile_image and featured_post.author.profile_image != 'default_avatar.svg' %}
+                                <img src="{{ url_for('static', filename='images/uploads/' + featured_post.author.profile_image) }}" alt="{{ featured_post.author.username }}" class="author-avatar-img">
+                            {% else %}
+                                <div class="author-avatar-fallback">{{ featured_post.author.username[:1].upper() }}</div>
+                            {% endif %}
+                            <div>
+                                <span class="author-name-text">{{ featured_post.author.username }}</span>
+                                <span class="article-date-text">{{ featured_post.created_at.strftime('%b %d, %Y') }}</span>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('posts.view_post', slug=featured_post.slug) }}" class="read-more-link">
+                            Read article <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </article>
+        </section>
+    {% endif %}
+
+    <!-- Category Filter Bar (Untitled UI Style) -->
+    <nav class="category-nav-bar">
+        <div class="filter-chips">
+            <a href="{{ url_for('main.index') }}" class="chip {{ 'active' if not selected_category else '' }}">
+                View all
+            </a>
+            {% for cat in categories %}
+                <a href="{{ url_for('main.index', category=cat.slug) }}" class="chip {{ 'active' if selected_category and selected_category.slug == cat.slug else '' }}">
+                    {{ cat.name }}
+                </a>
+            {% endfor %}
+        </div>
+    </nav>
+
+    <!-- Articles Feed Section -->
+    <section class="recent-articles-section">
+        {% if selected_category %}
+            <div class="category-header-banner">
+                <div>
+                    <h2 class="section-title">{{ selected_category.name }}</h2>
+                    <p class="section-subtitle">{{ selected_category.description or 'Articles tagged under ' + selected_category.name }}</p>
+                </div>
+                <span class="badge badge-primary">{{ total_count }} Article{{ 's' if total_count != 1 else '' }}</span>
+            </div>
+        {% else %}
+            <div class="section-header flex-between">
+                <div>
+                    <h2 class="section-title">All Publications</h2>
+                    <p class="section-subtitle">Catch up on the latest dispatches from our community.</p>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if posts %}
+            <div class="posts-grid">
+                {% for post in posts %}
+                    <article class="post-card">
+                        <div class="post-card-image">
+                            <a href="{{ url_for('posts.view_post', slug=post.slug) }}">
+                                {% if post.featured_image %}
+                                    <img src="{{ url_for('static', filename='images/uploads/' + post.featured_image) }}" alt="{{ post.title }}">
+                                {% else %}
+                                    <div class="post-card-placeholder">
+                                        <i class="fa-regular fa-newspaper"></i>
+                                    </div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="post-card-body">
+                            <div class="post-card-meta-top">
+                                {% if post.category %}
+                                    <span class="post-category">{{ post.category.name }}</span>
+                                {% endif %}
+                                <span class="read-time-pill">
+                                    {% set words = post.content|striptags|wordcount %}
+                                    {{ (words / 200)|round(0, 'ceil')|int }} min read
+                                </span>
+                            </div>
+                            <h3 class="post-title">
+                                <a href="{{ url_for('posts.view_post', slug=post.slug) }}">{{ post.title }}</a>
+                            </h3>
+                            <p class="post-summary">{{ post.summary or (post.content|striptags|truncate(120)) }}</p>
+                            <div class="post-meta">
+                                <div class="post-author-info">
+                                    <span class="author-name">{{ post.author.username }}</span>
+                                    <span class="post-date">{{ post.created_at.strftime('%b %d, %Y') }}</span>
+                                </div>
+                                <a href="{{ url_for('posts.view_post', slug=post.slug) }}" class="post-card-arrow" title="Read Story">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% elif not featured_post %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fa-solid fa-feather"></i></div>
+                <h3>No articles found</h3>
+                <p>Be the first author to publish in this topic!</p>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('posts.create_post') }}" class="btn btn-primary">Write an Article</a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Join & Start Writing</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Call to Action Banner -->
+    <section class="cta-banner-card">
+        <div class="cta-content">
+            <span class="badge badge-primary">Get Involved</span>
+            <h2 class="cta-title">Ready to share your story with the world?</h2>
+            <p class="cta-subtitle">
+                Join our growing network of developers, designers, and thinkers. Write with our rich text editor and publish in seconds.
+            </p>
+            <div class="cta-buttons">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('posts.create_post') }}" class="btn btn-primary btn-lg">Write on BlogCraft</a>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline btn-lg">Go to Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Create Free Account</a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline btn-lg">Sign In</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if tag %}
+        #{{ tag.name }} Articles — BlogCraft
+    {% elif query %}
+        Search: "{{ query }}" — BlogCraft
+    {% else %}
+        Search Articles — BlogCraft
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container content-section">
+    <!-- Search Results Header -->
+    <div class="search-header-container">
+        <div class="search-header-text">
+            {% if tag %}
+                <span class="badge badge-primary"><i class="fa-solid fa-tag"></i> Tag Filter</span>
+                <h1 class="section-title">Articles tagged with <span class="highlight-query">#{{ tag.name }}</span></h1>
+                <p class="section-subtitle">Showing all published stories labeled under this hashtag.</p>
+            {% elif query %}
+                <span class="badge badge-primary"><i class="fa-solid fa-magnifying-glass"></i> Search Results</span>
+                <h1 class="section-title">Search results for <span class="highlight-query">"{{ query }}"</span></h1>
+                <p class="section-subtitle">Showing {{ total_results }} matching article{{ 's' if total_results != 1 else '' }}.</p>
+            {% else %}
+                <span class="badge badge-primary">Search Catalog</span>
+                <h1 class="section-title">Browse all articles</h1>
+                <p class="section-subtitle">Explore publications by keyword, tag, or topic.</p>
+            {% endif %}
+        </div>
+
+        <!-- In-page Search Bar -->
+        <div class="search-page-box">
+            <form action="{{ url_for('main.search') }}" method="GET" class="search-page-form">
+                <i class="fa-solid fa-magnifying-glass search-page-icon"></i>
+                <input type="text" name="q" value="{{ query if not tag else '' }}" placeholder="Search by title, topic, or keyword..." class="search-page-input" />
+                <button type="submit" class="btn btn-primary btn-sm">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Filter Bar -->
+    {% if categories %}
+        <div class="category-nav-bar mt-3">
+            <div class="filter-chips">
+                <a href="{{ url_for('main.index') }}" class="chip">All Topics</a>
+                {% for cat in categories %}
+                    <a href="{{ url_for('main.index', category=cat.slug) }}" class="chip">
+                        {{ cat.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Results Feed -->
+    {% if pagination and pagination.items %}
+        <div class="posts-grid mt-4">
+            {% for post in pagination.items %}
+                <article class="post-card">
+                    <div class="post-card-image">
+                        <a href="{{ url_for('posts.view_post', slug=post.slug) }}">
+                            {% if post.featured_image %}
+                                <img src="{{ url_for('static', filename='images/uploads/' + post.featured_image) }}" alt="{{ post.title }}">
+                            {% else %}
+                                <div class="post-card-placeholder">
+                                    <i class="fa-regular fa-newspaper"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+                    </div>
+                    <div class="post-card-body">
+                        <div class="post-card-meta-top">
+                            {% if post.category %}
+                                <span class="post-category">{{ post.category.name }}</span>
+                            {% endif %}
+                            <span class="read-time-pill">
+                                {% set words = post.content|striptags|wordcount %}
+                                {{ (words / 200)|round(0, 'ceil')|int }} min read
+                            </span>
+                        </div>
+                        <h3 class="post-title">
+                            <a href="{{ url_for('posts.view_post', slug=post.slug) }}">{{ post.title }}</a>
+                        </h3>
+                        <p class="post-summary">{{ post.summary or (post.content|striptags|truncate(120)) }}</p>
+                        <div class="post-meta">
+                            <div class="post-author-info">
+                                <span class="author-name">{{ post.author.username }}</span>
+                                <span class="post-date">{{ post.created_at.strftime('%b %d, %Y') }}</span>
+                            </div>
+                            <a href="{{ url_for('posts.view_post', slug=post.slug) }}" class="post-card-arrow" title="Read Story">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if pagination.pages > 1 %}
+            <nav class="pagination-wrapper">
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('main.search', q=query, page=pagination.prev_num) if query and not tag else (url_for('main.tag_posts', slug=tag.slug, page=pagination.prev_num) if tag else '#') }}" class="btn btn-outline btn-sm">
+                        &larr; Previous
+                    </a>
+                {% endif %}
+
+                <span class="pagination-info">
+                    Page {{ pagination.page }} of {{ pagination.pages }}
+                </span>
+
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('main.search', q=query, page=pagination.next_num) if query and not tag else (url_for('main.tag_posts', slug=tag.slug, page=pagination.next_num) if tag else '#') }}" class="btn btn-outline btn-sm">
+                        Next &rarr;
+                    </a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <h3>No articles matched your search</h3>
+            <p>
+                {% if query %}
+                    We couldn't find any published stories matching <strong>"{{ query }}"</strong>.
+                {% else %}
+                    Try searching for keywords like <em>Python</em>, <em>Flask</em>, <em>Web</em>, or <em>Design</em>.
+                {% endif %}
+            </p>
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary mt-2">Explore All Stories</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

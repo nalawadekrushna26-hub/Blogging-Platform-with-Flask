@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile — BlogCraft{% endblock %}
+
+{% block content %}
+<div class="container profile-container">
+    <div class="profile-layout">
+        <!-- Sidebar Profile Card -->
+        <aside class="profile-sidebar">
+            <div class="card profile-card">
+                <div class="profile-avatar-wrapper">
+                    {% if current_user.profile_image and current_user.profile_image != 'default_avatar.svg' %}
+                        <img src="{{ url_for('static', filename='images/uploads/' + current_user.profile_image) }}" alt="{{ current_user.username }}" class="profile-avatar-img">
+                    {% else %}
+                        <div class="profile-avatar-fallback">
+                            <span>{{ current_user.username[:1].upper() }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <h2 class="profile-name">{{ current_user.username }}</h2>
+                <p class="profile-email"><i class="fa-regular fa-envelope"></i> {{ current_user.email }}</p>
+                <p class="profile-bio">{{ current_user.bio or 'No bio added yet.' }}</p>
+                <div class="profile-meta">
+                    <span><i class="fa-regular fa-calendar"></i> Joined {{ current_user.created_at.strftime('%B %Y') }}</span>
+                    <span><i class="fa-regular fa-newspaper"></i> {{ posts|length }} Article{{ 's' if posts|length != 1 else '' }}</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Settings & Articles Area -->
+        <div class="profile-main">
+            <!-- Edit Profile Card -->
+            <div class="card profile-content-card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fa-solid fa-user-pen"></i> Edit Profile Information</h3>
+                    <p class="card-subtitle">Update your account username, bio, and public avatar.</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data" class="profile-form">
+                    {{ form.hidden_tag() }}
+
+                    <div class="form-group">
+                        {{ form.username.label(class="form-label") }}
+                        {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+                        {% for error in form.username.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.bio.label(class="form-label") }}
+                        {{ form.bio(class="form-control" + (" is-invalid" if form.bio.errors else ""), rows=3, placeholder="Write a few lines about yourself...") }}
+                        {% for error in form.bio.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.profile_image.label(class="form-label") }}
+                        {{ form.profile_image(class="form-control-file") }}
+                        {% for error in form.profile_image.errors %}
+                            <span class="invalid-feedback">{{ error }}</span>
+                        {% endfor %}
+                        <small class="form-text">Supported formats: JPG, PNG, WEBP (Max 16MB)</small>
+                    </div>
+
+                    <div class="form-action">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+
+            <!-- Authored Articles List -->
+            <div class="card profile-content-card mt-4">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3 class="card-title"><i class="fa-solid fa-newspaper"></i> Your Articles</h3>
+                        <p class="card-subtitle">Manage, edit, or delete articles you have written.</p>
+                    </div>
+                    <a href="{{ url_for('posts.create_post') }}" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-plus"></i> Write New
+                    </a>
+                </div>
+
+                {% if posts %}
+                    <div class="user-posts-list">
+                        {% for post in posts %}
+                            <div class="user-post-item">
+                                <div class="user-post-info">
+                                    <h4 class="user-post-title">
+                                        <a href="{{ url_for('posts.view_post', slug=post.slug) }}">{{ post.title }}</a>
+                                    </h4>
+                                    <div class="user-post-meta">
+                                        <span class="badge {{ 'badge-success' if post.is_published else 'badge-warning' }}">
+                                            {{ 'Published' if post.is_published else 'Draft' }}
+                                        </span>
+                                        <span>{{ post.created_at.strftime('%b %d, %Y') }}</span>
+                                        {% if post.category %}
+                                            <span class="category-pill">{{ post.category.name }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="user-post-actions">
+                                    <a href="{{ url_for('posts.view_post', slug=post.slug) }}" class="btn btn-outline btn-sm">View</a>
+                                    <a href="{{ url_for('posts.edit_post', post_id=post.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state-sm">
+                        <p>You haven't written any articles yet.</p>
+                        <a href="{{ url_for('posts.create_post') }}" class="btn btn-primary btn-sm">Write Your First Post</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

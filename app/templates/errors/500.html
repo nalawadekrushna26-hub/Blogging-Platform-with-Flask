@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}500 — Server Error | BlogCraft{% endblock %}
+
+{% block content %}
+<div class="container error-container">
+    <div class="error-card">
+        <span class="error-code error-code-danger">500</span>
+        <h1 class="error-title">Unexpected server error</h1>
+        <p class="error-desc">
+            Something went wrong on our end while processing your request. Any pending database transactions were safely rolled back.
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                <i class="fa-solid fa-house"></i> Return Home
+            </a>
+            <button onclick="window.location.reload();" class="btn btn-outline">
+                <i class="fa-solid fa-rotate-right"></i> Try Again
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

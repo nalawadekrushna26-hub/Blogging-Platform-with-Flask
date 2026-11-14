@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Author Dashboard — BlogCraft{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div>
+            <div class="dashboard-greeting">
+                <span class="badge badge-primary">Creator Studio</span>
+                <h1 class="dashboard-title">Welcome back, {{ current_user.username }}</h1>
+                <p class="dashboard-subtitle">Monitor your publication metrics, manage drafts, and engage with your readers.</p>
+            </div>
+        </div>
+        <div class="dashboard-actions">
+            <a href="{{ url_for('posts.create_post') }}" class="btn btn-primary">
+                <i class="fa-solid fa-pen-nib"></i> New Article
+            </a>
+            <a href="{{ url_for('auth.profile') }}" class="btn btn-outline">
+                <i class="fa-solid fa-user-gear"></i> Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Analytics Metric Cards -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-primary">
+                <i class="fa-solid fa-book-open"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Total Stories</span>
+                <span class="metric-value">{{ total_posts }}</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-success">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Published</span>
+                <span class="metric-value">{{ published_count }}</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-warning">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Drafts</span>
+                <span class="metric-value">{{ draft_count }}</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-info">
+                <i class="fa-solid fa-comments"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Reader Comments</span>
+                <span class="metric-value">{{ total_comments }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Articles Management Section -->
+    <div class="card dashboard-table-card mt-4">
+        <div class="card-header flex-between">
+            <div>
+                <h2 class="card-title"><i class="fa-solid fa-table-list"></i> Your Publications</h2>
+                <p class="card-subtitle">Manage all published articles and ongoing drafts in one place.</p>
+            </div>
+            <a href="{{ url_for('posts.create_post') }}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-plus"></i> Write Story
+            </a>
+        </div>
+
+        {% if posts %}
+            <div class="table-responsive">
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Article</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Published Date</th>
+                            <th>Comments</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in posts %}
+                            <tr>
+                                <td class="table-post-cell">
+                                    <div class="table-post-info">
+                                        <a href="{{ url_for('posts.view_post', slug=post.slug) }}" class="table-post-title">
+                                            {{ post.title }}
+                                        </a>
+                                        {% if post.summary %}
+                                            <p class="table-post-summary">{{ post.summary|truncate(75) }}</p>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if post.category %}
+                                        <span class="category-pill">{{ post.category.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {{ 'badge-success' if post.is_published else 'badge-warning' }}">
+                                        {{ 'Published' if post.is_published else 'Draft' }}
+                                    </span>
+                                </td>
+                                <td class="table-date">{{ post.created_at.strftime('%b %d, %Y') }}</td>
+                                <td class="table-comments">
+                                    <i class="fa-regular fa-comment"></i> {{ post.comments.count() if post.comments else 0 }}
+                                </td>
+                                <td class="table-actions text-right">
+                                    <div class="action-btn-group">
+                                        <a href="{{ url_for('posts.view_post', slug=post.slug) }}" class="btn-icon" title="View Article">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('posts.edit_post', post_id=post.id) }}" class="btn-icon" title="Edit Article">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </a>
+                                        <button type="button" class="btn-icon btn-icon-danger" title="Delete" onclick="deleteArticle({{ post.id }}, '{{ post.title|replace("'", "\\'") }}')">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fa-solid fa-feather"></i></div>
+                <h3>No publications yet</h3>
+                <p>You haven't written any articles yet. Create your first post using our Quill rich text editor!</p>
+                <a href="{{ url_for('posts.create_post') }}" class="btn btn-primary mt-2">Create Your First Story</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hidden Universal Delete Form -->
+<form id="dashboardDeleteForm" method="POST" action="" style="display:none;"></form>
+
+<script>
+    function deleteArticle(postId, postTitle) {
+        if (confirm(`Are you sure you want to permanently delete "${postTitle}"? This cannot be undone.`)) {
+            const form = document.getElementById('dashboardDeleteForm');
+            form.action = `/posts/${postId}/delete`;
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}
